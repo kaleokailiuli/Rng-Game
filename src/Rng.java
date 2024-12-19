@@ -2,143 +2,134 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 
-public class Rng {
-    // Map to store item names and their quantities
-    private static Map<String, Integer> inventory = new HashMap<>();
+public class RNG {
+    private static final String[] ITEM_NAMES = {"Common Sword", "Rare Shield", "Epic Potion", "Legendary Armor"};
+    private static final String[] RARITIES = {"common", "rare", "epic", "legendary"};
+    private static final double[] RARITY_WEIGHTS = {0.7, 0.2, 0.08, 0.02}; // Common: 70%, Rare: 20%, Epic: 8%, Legendary: 2%
 
-    public static void main(String[] args) {
-        // Set up the frame
-        JFrame frame = new JFrame("RNG Button Game");
+    private static Inventory inventory = new Inventory();
+    private static Random random = new Random();
+
+    private static JLabel resultLabel;
+    private static JTextArea inventoryTextArea;
+    private static JPanel inventoryPanel; // Panel to hold the inventory display
+    private static Item lastRolledItem; // Store the last rolled item
+
+    // Roll an item based on the rarity probabilities
+    public static Item rollItem() {
+        double roll = random.nextDouble(); // Generates a double between 0 and 1
+        double cumulativeProbability = 0.0;
+
+        // Determine which rarity the roll corresponds to
+        for (int i = 0; i < ITEM_NAMES.length; i++) {
+            cumulativeProbability += RARITY_WEIGHTS[i];
+            if (roll < cumulativeProbability) {
+                return new Item(ITEM_NAMES[i], RARITIES[i]);
+            }
+        }
+        return null; // In case something goes wrong
+    }
+
+    // Add rolled item to the inventory
+    public static void rollAndAddToInventory() {
+        Item item = rollItem();
+        if (item != null) {
+            inventory.addItem(item); // Add the item to the inventory
+            lastRolledItem = item; // Store the last rolled item
+            // Update the result label to show the item name and rarity
+            resultLabel.setText("You rolled: " + item.getName() + " (" + item.getRarity() + ")");
+        } else {
+            resultLabel.setText("No item rolled.");
+        }
+    }
+
+    // Update the inventory display
+    public static void updateInventoryDisplay() {
+        inventoryTextArea.setText(inventory.getInventoryString());
+    }
+
+    // Set up the GUI
+    public static void createAndShowGUI() {
+        JFrame frame = new JFrame("RNG Game");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(800, 600);  // Increased size
-        frame.setLayout(new GridBagLayout());  // Using GridBagLayout for better control over placement
+        frame.setSize(400, 400);
+        frame.setLayout(new BorderLayout());
 
-        // Set background color to black
-        frame.getContentPane().setBackground(Color.BLACK);
+        // Create UI components
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        // Create GridBagConstraints to place the components
-        GridBagConstraints constraints = new GridBagConstraints();
-        constraints.insets = new Insets(10, 10, 10, 10);  // Padding around components
+        resultLabel = new JLabel("Click the button to roll an item");
+        resultLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Create a label to display the random number
-        JLabel label = new JLabel("Click the Button to spin");
-        label.setFont(new Font("Arial", Font.BOLD, 30));  // Set font size for better readability
-        label.setForeground(Color.WHITE);  // Set text color to white for visibility on black background
-        constraints.gridx = 0;  // Set the column of the label
-        constraints.gridy = 0;  // Set the row of the label
-        constraints.gridwidth = 2;  // Make label span two columns
-        constraints.anchor = GridBagConstraints.CENTER;  // Center the label horizontally
-        frame.add(label, constraints);
-
-        // Create a button to roll items
-        JButton rngButton = new JButton("Roll Item");
-        rngButton.setFont(new Font("Arial", Font.PLAIN, 20));  // Adjusted font size for the button
-        rngButton.setPreferredSize(new Dimension(200, 60));  // Set a preferred size for the button
-        constraints.gridx = 0;  // Set the column for the button
-        constraints.gridy = 1;  // Set the row for the button (below the label)
-        constraints.gridwidth = 2;  // Make button span two columns (centering it)
-        constraints.anchor = GridBagConstraints.CENTER;  // Center the button horizontally
-        frame.add(rngButton, constraints);
-
-        // Create a button for viewing the inventory
-        JButton inventoryButton = new JButton("View Inventory");
-        inventoryButton.setFont(new Font("Arial", Font.PLAIN, 20));
-        inventoryButton.setPreferredSize(new Dimension(200, 60));
-        constraints.gridy = 2;  // Place this below the Roll Item button
-        frame.add(inventoryButton, constraints);
-
-        // Set up the random number generator
-        Random random = new Random();
-
-        // Create an array of Item objects with updated ranges including Mythic and Secret items
-        Item[] items = {
-            new Item("Common Item", Color.GREEN, 0, 6000),        // 60%
-            new Item("Uncommon Item", Color.CYAN, 6001, 8500),    // 25%
-            new Item("Rare Item", Color.BLUE, 8501, 9300),         // 8%
-            new Item("Epic Item", Color.MAGENTA, 9301, 9800),      // 5%
-            new Item("Legendary Item", Color.ORANGE, 9801, 9950), // 1.5%
-            new Item("Mythic Item", Color.YELLOW, 9951, 9995),    // 0.5%
-            new Item("Secret Item", Color.PINK, 9996, 10000)      // 0.1%
-        };
-
-        // Add button action listener to roll items
-        rngButton.addActionListener(new ActionListener() {
+        JButton rollButton = new JButton("Roll for an Item");
+        rollButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        rollButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Generate a random number between 1 and 10000
-                int randomNumber = random.nextInt(10000) + 1;  // Random number between 1 and 10000
-                Item rolledItem = getItemBasedOnNumber(randomNumber, items);
-
-                // Update the label to show the item and its rarity in the format "Item Name (Rarity)"
-                label.setText("<html><b>" + rolledItem.getName() + " (" + getRarityName(rolledItem) + ")</b></html>");
-                label.setForeground(rolledItem.getColor());  // Set text color based on item
-
-                // Add the rolled item to the inventory list or update its quantity
-                updateInventory(rolledItem.getName());
+                rollAndAddToInventory(); // Roll the item and update the result label
             }
         });
 
-        // Add action listener to inventory button to view the inventory
-        inventoryButton.addActionListener(new ActionListener() {
+        JButton openInventoryButton = new JButton("Open Inventory");
+        openInventoryButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        openInventoryButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Open a new window to show the inventory using InventoryGUI
-                InventoryGUI.showInventory(inventory);
+                // Show the inventory panel when the button is clicked
+                inventoryPanel.setVisible(true);
+                updateInventoryDisplay(); // Update inventory display
             }
         });
 
-        // Center the window on the screen
-        frame.setLocationRelativeTo(null);
+        // Close Inventory Button
+        JButton closeInventoryButton = new JButton("Close Inventory");
+        closeInventoryButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        closeInventoryButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Hide the inventory panel when the button is clicked
+                inventoryPanel.setVisible(false);
+            }
+        });
 
-        // Make the frame visible
+        // Panel for displaying inventory
+        inventoryTextArea = new JTextArea();
+        inventoryTextArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(inventoryTextArea);
+        scrollPane.setPreferredSize(new Dimension(350, 150));
+
+        // Panel for inventory, initially hidden
+        inventoryPanel = new JPanel();
+        inventoryPanel.setLayout(new BorderLayout());
+        inventoryPanel.setVisible(false); // Start with inventory hidden
+        inventoryPanel.add(scrollPane, BorderLayout.CENTER);
+        inventoryPanel.add(closeInventoryButton, BorderLayout.SOUTH); // Add close button to inventory panel
+
+        // Add components to the main panel
+        panel.add(resultLabel);
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(rollButton);
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(openInventoryButton);
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(inventoryPanel);
+
+        // Add the main panel to the frame
+        frame.add(panel, BorderLayout.CENTER);
         frame.setVisible(true);
     }
 
-    // Method to determine the item based on the random number
-    private static Item getItemBasedOnNumber(int number, Item[] items) {
-        for (Item item : items) {
-            if (number >= item.getMinRange() && number <= item.getMaxRange()) {
-                return item;  // Return the matching item
+    // Main method to start the game
+    public static void main(String[] args) {
+        // Run the GUI in the Event Dispatch Thread
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                createAndShowGUI();
             }
-        }
-        return null;  // In case no item is found, though unlikely
-    }
-
-    // Method to update inventory (increment item quantity if already exists)
-    private static void updateInventory(String itemName) {
-        if (inventory.containsKey(itemName)) {
-            // If item exists in the inventory, increase its quantity
-            inventory.put(itemName, inventory.get(itemName) + 1);
-        } else {
-            // If item doesn't exist, add it to the inventory with quantity 1
-            inventory.put(itemName, 1);
-        }
-    }
-
-    // Method to get the rarity name based on item type
-    private static String getRarityName(Item item) {
-        String name = item.getName();
-        switch (name) {
-            case "Common Item":
-                return "Common";
-            case "Uncommon Item":
-                return "Uncommon";
-            case "Rare Item":
-                return "Rare";
-            case "Epic Item":
-                return "Epic";
-            case "Legendary Item":
-                return "Legendary";
-            case "Mythic Item":
-                return "Mythic";
-            case "Secret Item":
-                return "Secret";
-            default:
-                return "Unknown";
-        }
+        });
     }
 }

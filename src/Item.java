@@ -1,33 +1,28 @@
-import java.awt.*;
-
 public class Item {
     private String name;
-    private Color color;
-    private int minRange;
-    private int maxRange;
+    private String rarity;
+    private int quantity;
 
-    // Constructor
-    public Item(String name, Color color, int minRange, int maxRange) {
+    public Item(String name, String rarity) {
         this.name = name;
-        this.color = color;
-        this.minRange = minRange;
-        this.maxRange = maxRange;
+        this.rarity = rarity;
+        this.quantity = 1; // Every item starts with a quantity of 1
     }
 
-    // Getters
+    // Getters and setters for name, rarity, and quantity
     public String getName() {
         return name;
     }
 
-    public Color getColor() {
-        return color;
+    public String getRarity() {
+        return rarity;
     }
 
-    public int getMinRange() {
-        return minRange;
+    public int getQuantity() {
+        return quantity;
     }
 
-    public int getMaxRange() {
-        return maxRange;
+    public void incrementQuantity() {
+        this.quantity++;
     }
 }
