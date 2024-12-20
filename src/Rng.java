@@ -1,9 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -20,13 +17,17 @@ public class RNG {
         0.7, 0.2, 0.08, 0.02, 0.005, 0.001, 0.0001
     };
     private static final Map<String, String> ITEM_DESCRIPTIONS = new HashMap<>();
+    private static final Map<String, Integer> ITEM_PRICES = new HashMap<>();
+    private static final Map<String, Color> RARITY_COLORS = new HashMap<>();
 
     private static Inventory inventory = new Inventory();
     private static Random random = new Random();
+    private static int coins = 0;  // Track the number of coins
 
     private static JLabel resultLabel;
     private static JTextArea inventoryTextArea;
     private static JPanel inventoryPanel;
+    private static JLabel coinsLabel;  // To display the number of coins
 
     static {
         // Initialize item descriptions
@@ -37,6 +38,24 @@ public class RNG {
         ITEM_DESCRIPTIONS.put("Mythic Sword", "A mystical sword imbued with ancient power.");
         ITEM_DESCRIPTIONS.put("Secret Shield", "A shield forged in secrecy with unique properties.");
         ITEM_DESCRIPTIONS.put("Godly Armor", "Armor blessed by the gods, offering unparalleled protection.");
+
+        // Initialize rarity colors
+        RARITY_COLORS.put("common", Color.WHITE);
+        RARITY_COLORS.put("rare", Color.BLUE);
+        RARITY_COLORS.put("epic", Color.MAGENTA);
+        RARITY_COLORS.put("legendary", Color.ORANGE);
+        RARITY_COLORS.put("mythic", Color.CYAN);
+        RARITY_COLORS.put("secret", Color.PINK);
+        RARITY_COLORS.put("godly", Color.YELLOW);
+
+        // Set item prices for selling
+        ITEM_PRICES.put("Common Sword", 10);
+        ITEM_PRICES.put("Rare Shield", 50);
+        ITEM_PRICES.put("Epic Potion", 100);
+        ITEM_PRICES.put("Legendary Armor", 200);
+        ITEM_PRICES.put("Mythic Sword", 500);
+        ITEM_PRICES.put("Secret Shield", 1000);
+        ITEM_PRICES.put("Godly Armor", 5000);
     }
 
     public static Item rollItem() {
@@ -56,6 +75,13 @@ public class RNG {
         Item item = rollItem();
         if (item != null) {
             inventory.addItem(item);
+
+            // Set the color of the result text based on item rarity
+            Color rarityColor = RARITY_COLORS.get(item.getRarity());
+            resultLabel.setForeground(rarityColor);  // Set the color of the text
+
+            // Set a larger font size for the rolled item message
+            resultLabel.setFont(new Font("Arial", Font.BOLD, 24));  // Larger font size
             resultLabel.setText("You rolled: " + item.getName() + " (" + item.getRarity() + ")");
         } else {
             resultLabel.setText("No item rolled.");
@@ -64,6 +90,19 @@ public class RNG {
 
     public static void updateInventoryDisplay() {
         inventoryTextArea.setText(inventory.getInventoryString());
+    }
+
+    // New method to handle selling items from inventory
+    public static void sellItem(String itemName) {
+        if (inventory.hasItem(itemName)) {
+            int price = ITEM_PRICES.getOrDefault(itemName, 0);
+            coins += price;
+            inventory.removeItem(itemName);
+            updateInventoryDisplay();  // Refresh the inventory display
+
+            // Update the coin label to reflect the new balance
+            coinsLabel.setText("Coins: " + coins);
+        }
     }
 
     public static void showItemIndex() {
@@ -114,6 +153,19 @@ public class RNG {
                 @Override
                 public void mouseExited(MouseEvent e) {
                     itemLabel.setForeground(inventory.hasItem(itemName) ? Color.GREEN : Color.WHITE); // Reset color
+                }
+            });
+
+            itemLabel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    // If the item is clicked, prompt to sell it
+                    int confirmation = JOptionPane.showConfirmDialog(indexFrame, 
+                            "Do you want to sell " + itemName + " for " + ITEM_PRICES.get(itemName) + " coins?", 
+                            "Sell Item", JOptionPane.YES_NO_OPTION);
+                    if (confirmation == JOptionPane.YES_OPTION) {
+                        sellItem(itemName);
+                    }
                 }
             });
 
@@ -212,6 +264,12 @@ public class RNG {
         resultLabel.setFont(new Font("Arial", Font.PLAIN, 18));
         resultLabel.setForeground(Color.WHITE);
 
+        // Display for coins in the top-left corner
+        coinsLabel = new JLabel("Coins: " + coins, SwingConstants.LEFT);
+        coinsLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        coinsLabel.setForeground(Color.WHITE);
+        coinsLabel.setBorder(BorderFactory.createEmptyBorder(20, 20, 0, 0));
+
         mainPanel.add(resultLabel);
         mainPanel.add(buttonPanel);
 
@@ -227,6 +285,7 @@ public class RNG {
         JScrollPane scrollPane = new JScrollPane(inventoryTextArea);
         inventoryPanel.add(scrollPane, BorderLayout.CENTER);
 
+        frame.add(coinsLabel, BorderLayout.WEST); // Add coins label to top-left
         frame.add(mainPanel, BorderLayout.CENTER);
         frame.add(inventoryPanel, BorderLayout.EAST);
 
