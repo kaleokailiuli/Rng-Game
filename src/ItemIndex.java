@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class ItemIndex {
     public static void showItemIndex(Inventory inventory) {
@@ -32,6 +34,14 @@ public class ItemIndex {
                 itemLabel.setFont(new Font("Arial", Font.BOLD, 16));
                 itemLabel.setForeground(Color.GREEN);
             }
+
+            // Action listener for showing item descriptions
+            itemLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    String description = RNG.getItemDescription(itemName); // Use the getter method
+                    JOptionPane.showMessageDialog(indexFrame, description, itemName + " Description", JOptionPane.INFORMATION_MESSAGE);
+                }
+            });
 
             itemPanel.add(Box.createVerticalStrut(10)); // Add spacing between items
             itemPanel.add(itemLabel);
