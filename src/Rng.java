@@ -26,12 +26,19 @@ public class RNG {
     private static JTextArea inventoryTextArea;
     private static JPanel inventoryPanel;
 
-    // Admin panel
+    private static Coins coins = new Coins(); // Add the Coins object here
+    private static JLabel coinsLabel; // Label to show coins
+
+    // Admin panel variables
     private static boolean forceNextRoll = false;
     private static Item forcedItem = null;
 
+    // Item index panel
+    private static JPanel itemIndexPanel;
+    private static JList<String> itemIndexList;
+
     static {
-        // item descriptions
+        // Initialize item descriptions
         ITEM_DESCRIPTIONS.put("Common Sword", "A basic sword with minimal damage.");
         ITEM_DESCRIPTIONS.put("Rare Shield", "A sturdy shield with good durability.");
         ITEM_DESCRIPTIONS.put("Epic Potion", "A powerful potion that restores a lot of health.");
@@ -40,7 +47,7 @@ public class RNG {
         ITEM_DESCRIPTIONS.put("Secret Shield", "A shield forged in secrecy with unique properties.");
         ITEM_DESCRIPTIONS.put("Godly Armor", "Armor blessed by the gods, offering unparalleled protection.");
 
-        // rarity colors
+        // Initialize rarity colors
         RARITY_COLORS.put("common", Color.WHITE);
         RARITY_COLORS.put("rare", Color.BLUE);
         RARITY_COLORS.put("epic", Color.MAGENTA);
@@ -52,7 +59,7 @@ public class RNG {
 
     public static Item rollItem() {
         if (forceNextRoll && forcedItem != null) {
-            forceNextRoll = false;
+            forceNextRoll = false; // Reset the override flag
             return forcedItem;
         }
 
@@ -73,20 +80,61 @@ public class RNG {
         if (item != null) {
             inventory.addItem(item);
 
-            //  color of the result text based on item rarity
-            Color rarityColor = RARITY_COLORS.get(item.getRarity());
-            resultLabel.setForeground(rarityColor);  // color of the text
+            // Calculate coins based on item rarity
+            int coinsToAdd = calculateCoins(item);
+            coins.addCoins(coinsToAdd);  // Add the coins to the player's balance
 
-            // font size for the rolled item message
-            resultLabel.setFont(new Font("Arial", Font.BOLD, 24));  //font size
+            // Set the color of the result text based on item rarity
+            Color rarityColor = RARITY_COLORS.get(item.getRarity());
+            resultLabel.setForeground(rarityColor);  // Set the color of the text
+
+            // Set a larger font size for the rolled item message
+            resultLabel.setFont(new Font("Arial", Font.BOLD, 24));  // Larger font size
             resultLabel.setText("You rolled: " + item.getName() + " (" + item.getRarity() + ")");
         } else {
             resultLabel.setText("No item rolled.");
+        }
+
+        // Update the coins label
+        coinsLabel.setText("Coins: " + coins.getFormattedBalance());
+
+        // Update the inventory and item index
+        updateInventoryDisplay();
+        updateItemIndexDisplay();
+    }
+
+    public static int calculateCoins(Item item) {
+        // Add coins based on item rarity
+        switch (item.getRarity()) {
+            case "common":
+                return 5;
+            case "rare":
+                return 10;
+            case "epic":
+                return 100;
+            case "legendary":
+                return 500;
+            case "mythic":
+                return 10000;
+            case "secret":
+                return 1000000;
+            case "godly":
+                return 900000000;
+            default:
+                return 0;
         }
     }
 
     public static void updateInventoryDisplay() {
         inventoryTextArea.setText(inventory.getInventoryString());
+    }
+
+    public static void updateItemIndexDisplay() {
+        DefaultListModel<String> itemListModel = new DefaultListModel<>();
+        for (String itemName : ITEM_NAMES) {
+            itemListModel.addElement(itemName);
+        }
+        itemIndexList.setModel(itemListModel);
     }
 
     public static void showAdminPanel() {
@@ -138,7 +186,7 @@ public class RNG {
         adminFrame.setVisible(true);
     }
 
-    // method for item descriptions
+    // New getter method for item descriptions
     public static String getItemDescription(String itemName) {
         return ITEM_DESCRIPTIONS.get(itemName);
     }
@@ -158,35 +206,14 @@ public class RNG {
         titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         frame.add(titleLabel, BorderLayout.NORTH);
 
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new GridLayout(2, 1));
-        mainPanel.setBackground(Color.BLACK);
+        // Top-right corner button for admin panel
+        JPanel topRightPanel = new JPanel();
+        topRightPanel.setLayout(new BorderLayout());
+        topRightPanel.setBackground(Color.BLACK);
 
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(3, 2, 20, 20));
-        buttonPanel.setBackground(Color.BLACK);
-
-        JButton rollButton = new JButton("Roll for an Item");
-        rollButton.setFont(new Font("Arial", Font.BOLD, 16));
-        rollButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                rollAndAddToInventory();
-            }
-        });
-
-        JButton openInventoryButton = new JButton("Open Inventory");
-        openInventoryButton.setFont(new Font("Arial", Font.BOLD, 16));
-        openInventoryButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                inventoryPanel.setVisible(true);
-                updateInventoryDisplay();
-            }
-        });
-
-        JButton adminPanelButton = new JButton("Admin Panel");
-        adminPanelButton.setFont(new Font("Arial", Font.BOLD, 16));
+        JButton adminPanelButton = new JButton("Admin");
+        adminPanelButton.setFont(new Font("Arial", Font.BOLD, 12));
+        adminPanelButton.setPreferredSize(new Dimension(50, 50));  // Make the button small and square
         adminPanelButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -194,27 +221,72 @@ public class RNG {
             }
         });
 
-        JButton itemIndexButton = new JButton("Item Index");
-        itemIndexButton.setFont(new Font("Arial", Font.BOLD, 16));
-        itemIndexButton.addActionListener(new ActionListener() {
+        topRightPanel.add(adminPanelButton, BorderLayout.EAST);
+
+        frame.add(topRightPanel, BorderLayout.NORTH);
+
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BorderLayout());
+        mainPanel.setBackground(Color.BLACK);
+
+        // Roll button
+        JButton rollButton = new JButton("Roll Item");
+        rollButton.setFont(new Font("Arial", Font.BOLD, 16));
+        rollButton.setPreferredSize(new Dimension(200, 50));
+        rollButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                ItemIndex.showItemIndex(inventory);
+                rollAndAddToInventory();  // Roll and add item to inventory
             }
         });
 
+        // Open Inventory button
+        JButton openInventoryButton = new JButton("Open Inventory");
+        openInventoryButton.setFont(new Font("Arial", Font.BOLD, 16));
+        openInventoryButton.setPreferredSize(new Dimension(200, 50));  // Set a reasonable button size
+        openInventoryButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                inventoryPanel.setVisible(true); // Show the inventory panel
+                updateInventoryDisplay();
+            }
+        });
+
+        // Item Index button
+        JButton itemIndexButton = new JButton("Item Index");
+        itemIndexButton.setFont(new Font("Arial", Font.BOLD, 16));
+        itemIndexButton.setPreferredSize(new Dimension(200, 50));  // Set a reasonable button size
+        itemIndexButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                itemIndexPanel.setVisible(true); // Show the Item Index panel
+                updateItemIndexDisplay();  // Update the item index display
+            }
+        });
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setBackground(Color.BLACK);
         buttonPanel.add(rollButton);
         buttonPanel.add(openInventoryButton);
-        buttonPanel.add(adminPanelButton);
-        buttonPanel.add(itemIndexButton);
+        buttonPanel.add(itemIndexButton);  // Add Item Index button
 
-        resultLabel = new JLabel("Click 'Roll for an Item' to start", SwingConstants.CENTER);
-        resultLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        // Coins label (moved to the bottom)
+        coinsLabel = new JLabel("Coins: " + coins.getFormattedBalance(), SwingConstants.CENTER);
+        coinsLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        coinsLabel.setForeground(Color.WHITE);
+        mainPanel.add(coinsLabel, BorderLayout.SOUTH);
+
+        // Result label (centered)
+        resultLabel = new JLabel("Welcome to RNG Game!", SwingConstants.CENTER);
+        resultLabel.setFont(new Font("Arial", Font.PLAIN, 16));
         resultLabel.setForeground(Color.WHITE);
+        mainPanel.add(resultLabel, BorderLayout.CENTER);
 
-        mainPanel.add(resultLabel);
-        mainPanel.add(buttonPanel);
+        mainPanel.add(buttonPanel, BorderLayout.NORTH);
 
+        frame.add(mainPanel, BorderLayout.CENTER);
+
+        // Set up the inventory panel
         inventoryPanel = new JPanel();
         inventoryPanel.setLayout(new BorderLayout());
         inventoryPanel.setBackground(Color.BLACK);
@@ -234,14 +306,57 @@ public class RNG {
         closeInventoryButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                inventoryPanel.setVisible(false);
+                inventoryPanel.setVisible(false); // Hide the inventory panel
             }
         });
 
         inventoryPanel.add(closeInventoryButton, BorderLayout.SOUTH);
 
-        frame.add(mainPanel, BorderLayout.CENTER);
         frame.add(inventoryPanel, BorderLayout.EAST);
+
+        // Set up the item index panel
+        itemIndexPanel = new JPanel();
+        itemIndexPanel.setLayout(new BorderLayout());
+        itemIndexPanel.setBackground(Color.BLACK);
+        itemIndexPanel.setVisible(false);
+
+        DefaultListModel<String> itemListModel = new DefaultListModel<>();
+        for (String itemName : ITEM_NAMES) {
+            itemListModel.addElement(itemName);
+        }
+
+        itemIndexList = new JList<>(itemListModel);
+        itemIndexList.setBackground(Color.BLACK);
+        itemIndexList.setForeground(Color.WHITE);
+        itemIndexList.setFont(new Font("Arial", Font.PLAIN, 16));
+
+        JScrollPane itemIndexScrollPane = new JScrollPane(itemIndexList);
+        itemIndexPanel.add(itemIndexScrollPane, BorderLayout.CENTER);
+
+        // Item Index List listener
+        itemIndexList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                String selectedItem = itemIndexList.getSelectedValue();
+                String description = getItemDescription(selectedItem);
+
+                // Open the item description in a new window
+                JFrame descriptionFrame = new JFrame(selectedItem + " Description");
+                descriptionFrame.setSize(400, 300);
+                JTextArea descriptionArea = new JTextArea(description);
+                descriptionArea.setEditable(false);
+                descriptionArea.setBackground(Color.BLACK);
+                descriptionArea.setForeground(Color.WHITE);
+                descriptionArea.setFont(new Font("Arial", Font.PLAIN, 16));
+
+                JScrollPane scrollPaneDescription = new JScrollPane(descriptionArea);
+                descriptionFrame.add(scrollPaneDescription, BorderLayout.CENTER);
+
+                descriptionFrame.setLocationRelativeTo(null);
+                descriptionFrame.setVisible(true);
+            }
+        });
+
+        frame.add(itemIndexPanel, BorderLayout.WEST);
 
         frame.setVisible(true);
     }
