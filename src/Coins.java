@@ -10,8 +10,8 @@ public class Coins {
     }
 
     // New method to return the formatted coin balance
-    public String getFormattedBalance() {
-        return "Coins: " + coinBalance;
+    public int getFormattedBalance() {
+        return coinBalance;
     }
 
     public int getCoinBalance() {
